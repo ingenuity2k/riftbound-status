@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riftbound Prices — Status</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e0e0e0;padding:2rem;max-width:900px;margin:0 auto}
+  h1{font-size:1.5rem;margin-bottom:.25rem;color:#fff}
+  .ts{color:#666;font-size:.85rem;margin-bottom:2rem}
+  h2{font-size:1.1rem;margin:1.5rem 0 .75rem;color:#aaa;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+  table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+  th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid #222;color:#666;font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+  td{padding:.5rem .75rem;border-bottom:1px solid #151520;font-size:.9rem}
+  tr:hover{background:#12121a}
+  .name{font-weight:500;color:#fff}
+  .err{color:#ff4444;font-size:.8rem}
+  .muted{color:#555}
+  .mono{font-variant-numeric:tabular-nums}
+  .ok{color:#00cc66}.warn{color:#ffaa00}.bad{color:#ff4444}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+  .card{background:#12121a;border-radius:8px;padding:1rem 1.25rem}
+  .card .label{font-size:.8rem;color:#666;text-transform:uppercase;letter-spacing:.03em}
+  .card .value{font-size:1.5rem;font-weight:600;color:#fff;margin-top:.25rem}
+  .card .sub{font-size:.8rem;color:#555;margin-top:.25rem}
+  .loading{color:#555;padding:2rem;text-align:center}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}body{padding:1rem}}
+</style>
+</head>
+<body>
+<h1>🔮 Riftbound Prices</h1>
+<div class="ts" id="ts">Loading...</div>
+<div id="app" class="loading">Fetching data...</div>
+
+<script>
+const API = 'https://ozaxxeadjviovmjnvcxi.supabase.co/functions/v1/status?format=json';
+
+const icon = s => {
+  if (!s || s === 'pending') return '⏳';
+  if (s === 'ok' || s === 'succeeded') return '✅';
+  if (s === 'error' || s === 'failed') return '❌';
+  return '❓';
+};
+
+const ageClass = h => h < 6 ? 'ok' : h < 24 ? 'warn' : 'bad';
+
+const timeAgo = iso => {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
+
+function render({health, prices, jobs}) {
+  const now = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  document.getElementById('ts').textContent = `Updated ${now} · auto-refresh 5 min`;
+
+  let html = '';
+
+  // Prices
+  html += '<h2>📊 Price Data</h2><div class="grid">';
+  for (const p of prices) {
+    html += `<div class="card">
+      <div class="label">${p.source}</div>
+      <div class="value mono">${p.count.toLocaleString()} cards</div>
+      <div class="sub">${p.lastDate} · <span class="${ageClass(p.ageHours)}">${p.ageHours}h ago</span></div>
+    </div>`;
+  }
+  html += '</div>';
+
+  // Health
+  html += '<h2>🏥 Edge Functions</h2><table>';
+  html += '<tr><th>Function</th><th>Status</th><th>Last Run</th><th>Rows</th><th>Duration</th></tr>';
+  for (const h of health) {
+    html += `<tr>
+      <td class="name">${h.function_name}</td>
+      <td>${icon(h.last_status)} ${h.last_status}</td>
+      <td>${timeAgo(h.last_run)}</td>
+      <td class="mono">${h.rows_affected ?? '—'}</td>
+      <td class="mono">${h.last_duration_ms ? h.last_duration_ms + 'ms' : '—'}</td>
+    </tr>`;
+    if (h.last_error) html += `<tr><td></td><td colspan="4" class="err">${h.last_error}</td></tr>`;
+  }
+  html += '</table>';
+
+  // Cron jobs
+  html += '<h2>⏱ Cron Jobs</h2><table>';
+  html += '<tr><th>Job</th><th>Schedule</th><th>Last Run</th><th>Status</th><th>7d ok/fail</th></tr>';
+  for (const j of jobs) {
+    const name = j.name.replace('riftbound-', '');
+    html += `<tr>
+      <td class="name">${name}</td>
+      <td class="muted">${j.schedule}</td>
+      <td>${j.last_run ?? '—'}</td>
+      <td>${icon(j.last_status)} ${j.last_status ?? '—'}</td>
+      <td class="mono">${j.runs_ok}/${j.runs_ok + j.runs_failed}</td>
+    </tr>`;
+    if (j.last_error) html += `<tr><td></td><td colspan="4" class="err">${j.last_error}</td></tr>`;
+  }
+  html += '</table>';
+
+  document.getElementById('app').innerHTML = html;
+}
+
+async function load() {
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('app').innerHTML = `<div class="err">Failed to load: ${e}</div>`;
+  }
+}
+
+load();
+setInterval(load, 5 * 60 * 1000);
+</script>
+</body>
+</html>
