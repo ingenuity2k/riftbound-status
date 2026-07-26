@@ -89,7 +89,7 @@ function render({health, prices, jobs}) {
 
   // Cron jobs
   html += '<h2>⏱ Cron Jobs</h2><table>';
-  html += '<tr><th>Job</th><th>Schedule</th><th>Last Run</th><th>Status</th><th>7d ok/fail</th></tr>';
+  html += '<tr><th>Job</th><th>Schedule</th><th>Last Run</th><th>Status</th><th>7d Runs</th></tr>';
   for (const j of jobs) {
     const name = j.name.replace('riftbound-', '');
     html += `<tr>
@@ -97,7 +97,7 @@ function render({health, prices, jobs}) {
       <td class="muted">${j.schedule}</td>
       <td>${j.last_run ?? '—'}</td>
       <td>${icon(j.last_status)} ${j.last_status ?? '—'}</td>
-      <td class="mono">${j.runs_ok}/${j.runs_ok + j.runs_failed}</td>
+      <td class="mono"><span class="ok">${j.runs_ok}</span> / <span class="bad">${j.runs_failed}</span></td>
     </tr>`;
     if (j.last_error) html += `<tr><td></td><td colspan="4" class="err">${j.last_error}</td></tr>`;
   }
