@@ -25,6 +25,10 @@
   .card .value{font-size:1.5rem;font-weight:600;color:#fff;margin-top:.25rem}
   .card .sub{font-size:.8rem;color:#555;margin-top:.25rem}
   .loading{color:#555;padding:2rem;text-align:center}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:1rem}
+  .col{overflow-x:auto}
+  .col table{width:100%}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr}}
   @media(max-width:600px){.grid{grid-template-columns:1fr}body{padding:1rem}}
 </style>
 </head>
@@ -72,7 +76,9 @@ function render({health, prices, jobs}) {
   }
   html += '</div>';
 
-  // Health
+  // Health + Cron side-by-side
+  html += '<div class="two-col">';
+  html += '<div class="col">';
   html += '<h2>🏥 Edge Functions</h2><table>';
   html += '<tr><th>Function</th><th>Status</th><th>Last Run</th><th>Rows</th><th>Duration</th></tr>';
   for (const h of health) {
@@ -85,9 +91,9 @@ function render({health, prices, jobs}) {
     </tr>`;
     if (h.last_error) html += `<tr><td></td><td colspan="4" class="err">${h.last_error}</td></tr>`;
   }
-  html += '</table>';
+  html += '</table></div>';
 
-  // Cron jobs
+  html += '<div class="col">';
   html += '<h2>⏱ Cron Jobs</h2><table>';
   html += '<tr><th>Job</th><th>Schedule</th><th>Last Run</th><th>Status</th><th>7d Runs</th></tr>';
   for (const j of jobs) {
@@ -101,7 +107,8 @@ function render({health, prices, jobs}) {
     </tr>`;
     if (j.last_error) html += `<tr><td></td><td colspan="4" class="err">${j.last_error}</td></tr>`;
   }
-  html += '</table>';
+  html += '</table></div>';
+  html += '</div>';
 
   document.getElementById('app').innerHTML = html;
 }
